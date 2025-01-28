@@ -1,14 +1,14 @@
-const express = require('express');
-const app = express();
+// const express = require('express');
+// const app = express();
 
-const PORT = 8000;
+// const PORT = 8000;
 
-app.get('/', (req, res) => 
-{
-    res.send('Hello..It is working..!!!');
-});
+// app.get('/', (req, res) => 
+// {
+//     res.send('Hello..It is working..!!!');
+// });
 
-app.listen(PORT, () => 
-{
-    console.log(`Server running on http://localhost:${PORT}`);
-});
+// app.listen(PORT, () => 
+// {
+//     console.log(`Server running on http://localhost:${PORT}`);
+// });
