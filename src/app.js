@@ -25,12 +25,10 @@ import userRouter from "./routes/user.routes.js"
 
 
 
-try
-{app.use("/api/v1/user", userRouter);}
-catch(error)
-{
-  console.log(`Router Errror ${error}`);
-}
+// user route
+app.use("/api/v1/user", userRouter);
+
+
 
 
 
