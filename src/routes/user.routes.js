@@ -1,32 +1,26 @@
 import express from 'express';
 import {
-  registerOrLoginUser,
+  registerUser,
+  loginUser,
+  logoutUser,
   getUser,
   updateUser,
   deleteUser,
   changeCurrentPassword,
+  submitReview,
+  removeReview
 } from '../controllers/user.controller.js';
+import { verifyJWT } from '../middlewares/auth.middleware.js';
 
 const router = express.Router();
 
-// Register or Login a User (via email or Google)
-try
-{router.route("/register-or-login").post(registerOrLoginUser);}
-catch(error)
-{
-  console.log(`Router Errror ${error}`);
-}
-
-// Get User details
+router.route("/register").post(registerUser);
+router.route("/review").post(verifyJWT,submitReview);
+router.route("/login").post(loginUser);
+router.route("/logout").post(verifyJWT,logoutUser)
 router.route("/:id").get(getUser);
-
-// Update User details
 router.route("/user").put(updateUser);
-
-// Delete User
 router.route("/user").delete(deleteUser);
-
-// Change User password
 router.route("/change-password").post(changeCurrentPassword);
 
 export default router;

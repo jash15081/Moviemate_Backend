@@ -1,31 +1,22 @@
-import mongoose, {model, Schema} from "mongoose";
+import mongoose from "mongoose";
 
-
-const movieSchema = new Schema(
-    {
-      name: {
-        type: String,
-        required: true,
-      },
-      pic_url: {
-        type: String, // URL for movie poster
-      },
-      description: {
-        type: String, // Movie description
-      },
-      trailer_url: {
-        type: String, // URL for movie trailer
-      },
-      release_date: {
-        type: Date,
-        required: true,
-      },
-      average_rating: {
-        type: Number, // Calculated based on user reviews
-        default: 0,
-      },
-    },
-    { timestamps: true }
-  );
-  
-  module.exports = mongoose.model("Movie", movieSchema);
+const movieSchema = new mongoose.Schema(
+  {
+    name: { type: String, required: true },
+    pic_url: { type: String },
+    description: { type: String },
+    trailer_url: { type: String },
+    release_date: { type: String, required: true }, // Keep as string since years are not full date
+    average_rating: { type: Number, default: 0 },
+    genre: { type: [String], default: [] },
+    cast: { type: [String], default: [] },
+    directors: { type: [String], default: [] },
+    runtime: { type: String },
+    meta_score: { type: Number },
+    certificate: { type: String },
+    votes: { type: Number },
+    gross: { type: String },
+  },
+  { timestamps: true }
+);
+export const Movie  = mongoose.model("Movie", movieSchema);
