@@ -4,6 +4,7 @@ import { Review } from "../models/review.model.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { ApiError } from "../utils/ApiError.js";
 import {ApiResponse} from "../utils/ApiResponse.js"
+import axios from "axios";
 const generateAccessAndRefereshTokens = async(userId) =>{
   try {
       const user = await User.findById(userId)
@@ -126,7 +127,9 @@ const logoutUser = asyncHandler(async(req, res) => {
   .clearCookie("refreshToken", options)
   .json(new ApiResponse(200, {}, "User logged Out"))
 })
-
+const checkAuth = asyncHandler(async(req,res)=>{
+  res.status(200).json(new ApiResponse(200,"User Authenticated !"));
+})
 const getUser = async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
@@ -193,33 +196,37 @@ const changeCurrentPassword = async (req, res) => {
   }
 };
 
+const recommendMovies = asyncHandler(async(req,res)=>{
+  
+  const user_id = req.user._id
+  const response  = await axios.get(`http://127.0.0.1:8000/recommend-movies/${user_id}`);
+  if(!response){
+    throw new ApiError(500,"Failes to fetch reommendations");
+  }
+  console.log(response.data)
+  res.status(200).json(response.data)
+})
 
 
 const submitReview = asyncHandler(async (req, res) => {
-  const { movie_id, rate, text } = req.body;
-  const user_id = req.user._id; // Assuming user is authenticated via middleware
+  const { movie_id, text } = req.body;
+  const user_id = req.user._id;
 
-  if (!movie_id || !rate || !text) {
+  if (!movie_id || !text) {
       throw new ApiError(400, "All fields are required");
   }
 
-  // Check if the movie exists
   const movieExists = await Movie.findById(movie_id);
   if (!movieExists) {
       throw new ApiError(404, "Movie not found");
   }
 
-  // Check if the user has already reviewed the movie
-  const existingReview = await Review.findOne({ user_id, movie_id });
-  if (existingReview) {
-      throw new ApiError(409, "You have already reviewed this movie");
-  }
-
-  // Create a new review
+  const response  = await axios.post("http://127.0.0.1:8000/predict-rating",{text:text});
+  console.log(response.data.rating);
   const review = await Review.create({
       user_id,
       movie_id,
-      rate,
+      rate:response.data.rating,
       text,
   });
 
@@ -255,6 +262,37 @@ const removeReview = asyncHandler(async (req, res) => {
   );
 });
 
+const getTopMovies = asyncHandler(async (req,res)=>{
+  const topMovies = await Movie.aggregate([
+    {
+      $facet: {
+        latest: [
+          { $sort: { release_date: -1 } },
+          { $limit: 10 }
+        ],
+        topRated: [
+          { $sort: { average_rating: -1 } },
+          { $limit: 10 }
+        ]
+      }
+    },
+    {
+      $project: {
+        combined: { $setUnion: ["$latest", "$topRated"] }
+      }
+    }
+  ])
+  
+  const movies = topMovies[0]?.combined || []
+  
+  
+  const shuffledMovies = movies.sort(() => Math.random() - 0.5)
+
+  res.status(200).json(new ApiResponse(200,shuffledMovies,"movies fetched successfully"))
+})
+
+
+
 export {
   registerUser,
   getUser,
@@ -264,5 +302,8 @@ export {
   loginUser,
   logoutUser,
   submitReview,
-  removeReview
+  removeReview,
+  recommendMovies,
+  checkAuth,
+  getTopMovies
 };

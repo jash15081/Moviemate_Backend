@@ -6,7 +6,7 @@ const movieSchema = new mongoose.Schema(
     pic_url: { type: String },
     description: { type: String },
     trailer_url: { type: String },
-    release_date: { type: String, required: true }, // Keep as string since years are not full date
+    release_date: { type: String, required: true }, 
     average_rating: { type: Number, default: 0 },
     genre: { type: [String], default: [] },
     cast: { type: [String], default: [] },
