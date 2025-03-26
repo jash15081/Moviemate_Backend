@@ -132,7 +132,7 @@ const checkAuth = asyncHandler(async(req,res)=>{
 })
 const getUser = async (req, res) => {
   try {
-    const user = await User.findById(req.params.id);
+    const user = await User.findById(req.user._id);
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
@@ -145,10 +145,10 @@ const getUser = async (req, res) => {
 
 const updateUser = async (req, res) => {
   try {
-    const { username, email, role } = req.body;
+    const { username, email } = req.body;
     const user = await User.findByIdAndUpdate(
-      req.params.id,
-      { username, email, role},
+      req.user._id,
+      { username, email},
       { new: true }
     );
     if (!user) {
@@ -221,6 +221,7 @@ const submitReview = asyncHandler(async (req, res) => {
       throw new ApiError(404, "Movie not found");
   }
 
+
   const response  = await axios.post("http://127.0.0.1:8000/predict-rating",{text:text});
   console.log(response.data.rating);
   const review = await Review.create({
@@ -229,6 +230,16 @@ const submitReview = asyncHandler(async (req, res) => {
       rate:response.data.rating,
       text,
   });
+    const reviews = await Review.find({ movie_id });
+    const totalVotes = reviews.length;
+    const totalRating = reviews.reduce((sum, review) => sum + review.rate, 0);
+    const averageRating = totalVotes > 0 ? totalRating / totalVotes : 0;
+
+    // Update movie model
+    await Movie.findByIdAndUpdate(movie_id, {
+      average_rating: averageRating,
+      votes: totalVotes,
+    });
 
   if (!review) {
       throw new ApiError(500, "Failed to submit review");
@@ -280,8 +291,48 @@ const getTopMovies = asyncHandler(async (req,res)=>{
       $project: {
         combined: { $setUnion: ["$latest", "$topRated"] }
       }
+    },
+    {
+      $unwind: "$combined"
+    },
+    {
+      $lookup: {
+        from: "reviews",
+        localField: "combined._id",
+        foreignField: "movie_id",
+        as: "reviews"
+      }
+    },
+    {
+      $addFields: {
+        "combined.positiveReviews": {
+          $size: {
+            $filter: {
+              input: "$reviews",
+              as: "review",
+              cond: { $gte: ["$$review.rate", 4] }
+            }
+          }
+        },
+        "combined.negativeReviews": {
+          $size: {
+            $filter: {
+              input: "$reviews",
+              as: "review",
+              cond: { $lte: ["$$review.rate", 2] }
+            }
+          }
+        }
+      }
+    },
+    {
+      $group: {
+        _id: null,
+        combined: { $push: "$combined" }
+      }
     }
   ])
+
   
   const movies = topMovies[0]?.combined || []
   
@@ -291,7 +342,66 @@ const getTopMovies = asyncHandler(async (req,res)=>{
   res.status(200).json(new ApiResponse(200,shuffledMovies,"movies fetched successfully"))
 })
 
+const getMoiveDetails = asyncHandler(async (req,res)=>{
+  const {id} = req.params;
+  const movie = await Movie.findById(id);
+  if(!movie){
+    return new ApiError(400,"movie not found")
+  }
+  res.status(200).json(movie)
+})
 
+const getMovieReviews = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const userId = req.user ? req.user._id.toString() : null; // Get logged-in user ID
+
+  const reviews = await Review.find({ movie_id: id })
+    .populate("user_id", "username")
+    .lean();
+
+  const formattedReviews = reviews.map((review) => ({
+    id: review._id,
+    author: review.user_id?.username || "Anonymous",
+    score: review.rate,
+    date: new Date(review.createdAt).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    }).toUpperCase(),
+    content: review.text,
+    type: review.rate >= 4 ? "positive" : review.rate >= 2 ? "mixed" : "negative",
+    canEdit: userId === review.user_id?._id.toString(), // Check if logged-in user is the author
+  }));
+
+  res.status(200).json(formattedReviews);
+});
+
+
+
+const search = asyncHandler(async(req,res)=>{
+  console.log("helloasd")
+  const { query } = req.query;
+  console.log(query)
+  if (!query) {
+    return res.status(400).json({ message: "Search query is required" });
+  }
+
+  try {
+    const movies = await Movie.find({
+      $or: [
+        { name: { $regex: query, $options: "i" } },
+        { genre: { $regex: query, $options: "i" } },
+        { cast: { $regex: query, $options: "i" } },
+        { directors: { $regex: query, $options: "i" } },
+        { description: { $regex: query, $options: "i" } }
+      ]
+    }).limit(30);
+
+    res.status(200).json(movies);
+  } catch (error) {
+    res.status(500).json({ message: "Something went wrong", error: error.message });
+  }
+})
 
 export {
   registerUser,
@@ -305,5 +415,8 @@ export {
   removeReview,
   recommendMovies,
   checkAuth,
-  getTopMovies
+  getTopMovies,
+  getMovieReviews,
+  getMoiveDetails,
+  search
 };
