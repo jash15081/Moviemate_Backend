@@ -402,6 +402,31 @@ const search = asyncHandler(async(req,res)=>{
     res.status(500).json({ message: "Something went wrong", error: error.message });
   }
 })
+const addToWatchList = asyncHandler(async(req,res)=>{
+  const user_id = req.user._id;
+  const {movie_id} = req.body;
+  if(!movie_id){
+    throw new ApiError(400,"movie Id required");
+  }
+  await User.findByIdAndUpdate(user_id,{$addToSet:{watchList:movie_id}});
+  res.status(200).json(new ApiResponse(200,"Added successfully!"));
+})
+const removeFromWatchlist = asyncHandler(async(req,res)=>{
+  const user_id = req.user._id;
+  const {movie_id} = req.body;
+  if(!movie_id){
+    throw new ApiError(400,"movie Id required");
+  }
+  await User.findByIdAndUpdate(user_id,{$pull:{watchList:movie_id}});
+  res.status(200).json(new ApiResponse(200,"Removed successfully!"));
+})
+
+const getWatchlist = asyncHandler(async(req,res)=>{
+  const user_id = req.user._id;
+  const user = await User.findById(user_id).populate("watchList");
+  console.log("Watchlist Movies:", user.watchList);
+  res.status(200).json(user.watchList);
+})
 
 export {
   registerUser,
@@ -418,5 +443,8 @@ export {
   getTopMovies,
   getMovieReviews,
   getMoiveDetails,
-  search
+  search,
+  getWatchlist,
+  addToWatchList,
+  removeFromWatchlist
 };

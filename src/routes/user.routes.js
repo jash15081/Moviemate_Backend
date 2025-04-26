@@ -14,7 +14,10 @@ import {
   getTopMovies,
   getMoiveDetails,
   getMovieReviews,
-  search
+  search,
+  getWatchlist,
+  addToWatchList,
+  removeFromWatchlist
 } 
 from '../controllers/user.controller.js';
 import { verifyJWT } from '../middlewares/auth.middleware.js';
@@ -38,5 +41,8 @@ router.route("/user").put(updateUser);
 router.route("/user").delete(deleteUser);
 router.route("/change-password").post(changeCurrentPassword);
 router.route("/getMovieReviews/:id").get(verifyJWT,getMovieReviews)
+router.route("/getWatchList").get(verifyJWT,getWatchlist)
+router.route("/addToWatchList").post(verifyJWT,addToWatchList)
+router.route("/removeFromWatchList").post(verifyJWT,removeFromWatchlist)
 
 export default router;

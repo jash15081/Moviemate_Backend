@@ -39,6 +39,10 @@ const userSchema = new mongoose.Schema(
       enum: ["user", "admin"], // Assuming roles can be 'user' or 'admin'
       default: "user",
     },
+    watchList:[{
+      type:Schema.Types.ObjectId,
+      ref:'Movie'
+    }],
     likedMovies: [
       {
         type: Schema.Types.ObjectId,
